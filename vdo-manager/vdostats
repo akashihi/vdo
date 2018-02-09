@@ -29,6 +29,7 @@ from __future__ import print_function
 
 import errno
 import gettext
+import json
 import locale
 import os
 import sys
@@ -53,6 +54,8 @@ parser.add_option("--all", action="store_true", dest="all",
 parser.add_option("--human-readable", action="store_true",
                   dest="humanReadable",
                   help=_("Display stats in human-readable form"))
+parser.add_option("--json", action="store_true", dest="json",
+                  help=_("Output in JSON format"))
 parser.add_option("--si", action="store_true", dest="si",
                   help=_("Use SI units, implies --human-readable"))
 parser.add_option("--verbose", action="store_true", dest="verbose",
@@ -217,6 +220,16 @@ def printYAML(stats, dedupeFormatter):
       dedupeFormatter.output(LabeledValue.make(stat.getDevice(),
                                                [s.labeled() for s in samples]))
 
+def printJSON(stats, options):
+  for stat in stats:
+    data = stat.getSamples()[0].sample
+    if not options.verbose:
+      fields_filter = ["oneKBlocksUsed", "oneKBlocksAvailable",
+                       "oneKBlocks", "savings"]
+      data = {k: v for k, v in data.iteritems() if k in fields_filter}
+    out = {stat.getDevice(): data}
+    print(json.dumps(out))
+
 def main():
   try:
     locale.setlocale(locale.LC_ALL, '')
@@ -250,7 +263,9 @@ def main():
     print(e, file = sys.stderr)
     return 1
 
-  if options.verbose:
+  if options.json:
+    printJSON(stats, options)
+  elif options.verbose:
     printYAML(stats, dedupeFormatter)
   else:
     printDF(stats, options)
